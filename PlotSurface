@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 def surface(iv,filtered_options):
     strike_price = filtered_options["strike"].to_numpy()
-    time = filtered_options["time"].to_numpy()
+    time = filtered_options["T"].to_numpy()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")

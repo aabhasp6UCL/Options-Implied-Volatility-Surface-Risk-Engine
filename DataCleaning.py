@@ -1,18 +1,12 @@
 import numpy as np
-import panda as pd
+import pandas as pd
 import yfinance as yf
 
 def cleanData(options,usTreasury):
-
-    unique_expirations = options["expiration"].unique()
-
-    for expiration in unique_expirations:
-        filtered_options = options[options["expiration"] == expiration]
     
     bid_ask = filtered_options["ask"] > filtered_options["bid"]
 
-    for isGreater in bid_ask:
-        filtered_options = filtered_options[isGreater]
+    filtered_options = filtered_options[bid_ask]
 
     filtered_options["market_price"] = (filtered_options["bid"] + filtered_options["ask"])/2   
 

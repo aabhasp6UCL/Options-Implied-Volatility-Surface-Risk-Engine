@@ -1,18 +1,20 @@
+import numpy as np
+
 from OptionContractsData import loadData
 from DataCleaning import cleanData
 from Black-scholes import callOption, putOption
 from ImpliedVolatilitySolver import solveIV
 from PlotSurface import surface
 
-option_contracts = 2013-02-26options.csv
+option_contracts = "2013-02-26options.csv"
 options = loadData(option_contracts)
 
-usTreasury = par-yield-curve-rates-2010-2019.csv
+usTreasury = "par-yield-curve-rates-2010-2019.csv"
 f_options = cleanData(options,usTreasury)
 
 iv = []
 
-for i in range(f_options):
+for i in range(len(f_options)):
 
     S = f_options["S"].iloc[i]
     K = f_options["K"].iloc[i]
