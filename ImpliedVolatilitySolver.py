@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import brentq
-from Black-scholes import callOption,putOption
+from Black_scholes import callOption,putOption
 
 def solveIV(S,K,T,r,option_type,market_price):
     
@@ -9,4 +9,4 @@ def solveIV(S,K,T,r,option_type,market_price):
     else:
         pricing_type = putOption
 
-    return brentq(pricing_type(S,K,T,r)-market_price,0.00001,5)
+    return brentq(lambda sigma: pricing_type(S, K, T, r, sigma) - market_price, 0.00001, 5)
