@@ -1,18 +1,16 @@
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
-def surface(iv,filtered_options):
+def surface(iv, filtered_options):
     strike_price = filtered_options["strike"].to_numpy()
     time = filtered_options["T"].to_numpy()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 
-    ax.plot_trisurf(strike_price,time,iv)
+    ax.plot_trisurf(strike_price, time, iv)
 
     ax.set_xlabel("Strike Price (K)")
     ax.set_ylabel("Time to Expiration (T)")
     ax.set_zlabel("Implied Volatility")
- 
-    plt.show()
 
+    return plt.show()
