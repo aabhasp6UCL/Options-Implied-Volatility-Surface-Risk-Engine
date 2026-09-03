@@ -162,50 +162,37 @@ option_contracts = "2013-02-26options.csv"
 usTreasury = "par-yield-curve-rates-2010-2019.csv"
 ```
 
+Edit these paths directly to point at different input files.
+
+## Known Issues & Current Limitations
+
+A careful read-through of the current codebase surfaced the following issues worth fixing before relying on this framework for real analysis:
+
+1. **Broken import in `main.py`** — it imports `from Black-scholes import callOption, putOption`, but Python module names cannot contain hyphens, and the actual file is `Black_scholes.py`. This line needs to be corrected to `from Black_scholes import callOption, putOption` or the script will fail to run.
+2. **Undefined variable in `DataCleaning.py`** — `cleanData(options, usTreasury)` references `filtered_options` on its very first line without ever deriving it from the `options` argument (e.g., a missing `filtered_options = options.copy()`). This currently raises a `NameError` when the function is called.
+3. **Column name mismatch** — `main.py` reads `f_options["K"]`, but neither `DataCleaning.py` nor the source CSV appear to create a `"K"` column; `PlotSurface` instead reads `"strike"`. These need to be reconciled (e.g., rename `strike` → `K` inside `cleanData`, or update `main.py`/`PlotSurface` to use a single consistent name).
+4. **Missing dependency manifest** — no `requirements.txt` / `pyproject.toml` is checked in.
+5. **Missing external data file** — the Treasury par-yield CSV `main.py` expects is not part of the repo and must be downloaded separately (see [Data Requirements](#data-requirements)).
+6. **`PlotSurface` has no file extension** — it should be renamed `PlotSurface.py` for conventional, IDE-friendly Python imports.
+7. **Per-row network calls** — `DataCleaning.py` calls `yfinance.download()` inside a Python `for` loop, once per option row. For any realistically sized options chain this will be slow and likely to hit Yahoo Finance rate limits.
+8. **No error handling around `brentq`** — if a quoted market price falls outside the price bounds achievable within `sigma ∈ [0.00001, 5]` (e.g., a stale or bad quote), `solveIV` will raise an unhandled `ValueError` and halt the whole run.
+9. **No caching** — every run re-fetches identical spot prices from Yahoo Finance rather than persisting them locally.
+10. **European-style pricing assumption** — Black-Scholes assumes European exercise; many single-name equity options are American-style, so this can bias the recovered implied vols, particularly for puts.
+11. **No `LICENSE` file** — the repository does not currently specify usage terms.
+
 ## Future Development Ideas
 
-### Data & Ingestion
-- Add a pinned `requirements.txt` / `pyproject.toml`.
-- Auto-download and cache the Treasury par-yield curve directly from the Treasury.gov API instead of requiring a manual file.
-- Support additional data providers (CBOE, Polygon.io, Tiingo, Interactive Brokers, OptionMetrics) behind a pluggable data-adapter interface.
-- Batch/vectorize the `yfinance` spot-price lookups (one call per underlying+date, not per row) and cache results locally (SQLite/Parquet).
-- Add schema validation (e.g., `pandera` or `pydantic`) on the input CSV to fail fast with clear error messages on malformed data.
-
-### Numerical & Modeling Improvements
-- Replace/augment Brent's method with a Newton-Raphson solver using Black-Scholes vega for faster convergence, falling back to bisection when vega is near zero.
-- Detect and clearly report arbitrage violations (price below intrinsic value or above the no-arbitrage upper bound) instead of letting the solver fail silently.
-- Add American-option support (binomial/trinomial tree or Barone-Adesi-Whaley approximation) so IV isn't systematically biased for early-exercise contracts.
-- Extend to Black-Scholes-Merton with a continuous dividend yield `q`, since the current formulas assume no dividends.
-- Vectorize the implied-volatility loop (e.g., a batched Newton implementation) instead of a Python `for` loop, for performance on larger chains.
-- Add unit tests validating `callOption`/`putOption` against known reference values and put-call parity.
-
-### Surface Construction & Visualization
-- Fit a smooth, arbitrage-free parametric surface (e.g., an SVI parameterization, or spline/thin-plate interpolation) instead of a raw triangulated scatter surface.
-- Add an interactive visualization option (Plotly 3D surface, or a small Streamlit/Dash app) so users can rotate, zoom, and hover for exact values.
-- Add 2D cross-section views: volatility smiles (IV vs. strike at fixed T) and term structure (IV vs. T at fixed K).
-- Support a moneyness-based x-axis (`K/S` or log-moneyness) as an alternative to raw strike, which is the more standard basis for comparing surfaces.
-- Separate/overlay call vs. put surfaces, or build a merged OTM-only surface (the convention many practitioners use to avoid stale in-the-money quotes).
-
-### Engineering & Usability
-- Package the project properly (`pyproject.toml`, `src/` layout) so it can be `pip install -e .`'d and imported cleanly.
-- Add a CLI (`argparse`/`click`/`typer`) so the data file, Treasury file, ticker, and date can be passed as flags rather than hardcoded.
-- Add a YAML/TOML config file for run parameters.
-- Add structured logging and a progress bar (`tqdm`) for the per-contract IV solve loop.
-- Add automated tests (`pytest`) and CI (GitHub Actions) running linting (`ruff`) and the test suite on every push.
-- Add type hints throughout, checked with `mypy`.
-- Add a `Dockerfile` for a reproducible run environment.
-
-### Extended Analytics
-- Compute and expose option Greeks (delta, gamma, vega, theta, rho) alongside implied volatility.
-- Persist daily surfaces and add tooling to animate/compare surface evolution over time.
-- Add standard vol-trading summary metrics (e.g., 25-delta risk reversal, butterfly) computed from the fitted surface.
-- Support a live/streaming data mode for a "current surface," in addition to historical snapshots.
-- Extend to other asset classes (FX, index, and futures options) with the appropriate model variants (Garman-Kohlhagen, Black-76).
-
-### Documentation
-- Add example notebooks walking through a full pipeline run with plots.
-- Add generated API reference docs (e.g., via `mkdocs` or `Sphinx`).
-- Add `CONTRIBUTING.md` plus issue and pull-request templates.
+- Add a pinned `requirements.txt` / `pyproject.toml`, and auto-download/cache the Treasury par-yield curve instead of requiring a manual file.
+- Batch/vectorize the `yfinance` spot-price lookups with local caching (SQLite/Parquet) instead of one network call per row.
+- Replace/augment Brent's method with a Newton-Raphson solver using Black-Scholes vega, with arbitrage-violation checks so bad quotes fail gracefully instead of crashing the solver.
+- Add American-option support (binomial tree or Barone-Adesi-Whaley) and a dividend yield `q` (Black-Scholes-Merton), since the current model assumes European exercise with no dividends.
+- Fit a smooth, arbitrage-free surface (e.g., SVI or spline interpolation) rather than a raw triangulated scatter plot, plus 2D smile/term-structure cross-sections and a moneyness-based (`K/S`) axis option.
+- Make the plot interactive (Plotly 3D or a Streamlit/Dash app) instead of a static `matplotlib` window.
+- Package the project properly (`pyproject.toml`, CLI via `click`/`typer`, config file, logging/progress bars) instead of hardcoded scripts.
+- Add automated tests (`pytest`), CI (GitHub Actions with lint + tests), type hints (`mypy`), and a `Dockerfile` for reproducibility.
+- Compute option Greeks (delta, gamma, vega, theta, rho) and vol-trading metrics (e.g., risk reversal, butterfly) alongside IV.
+- Persist and animate historical surfaces over time; support live/streaming data and other asset classes (FX, index, futures options).
+- Add example notebooks, generated API docs (`mkdocs`/`Sphinx`), and a `CONTRIBUTING.md`.
 
 ## Contributing
 
