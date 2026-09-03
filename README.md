@@ -4,26 +4,6 @@ A lightweight Python pipeline that takes a raw options-chain snapshot, backs out
 
 Built as an educational/quant-finance project exploring the full path from raw market data to a volatility surface: data ingestion → cleaning & enrichment (spot price, risk-free rate, time-to-expiry) → root-finding for implied vol → 3D visualization.
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Pipeline / How It Works](#pipeline--how-it-works)
-- [Repository Structure](#repository-structure)
-- [Mathematical Background](#mathematical-background)
-- [Data Requirements](#data-requirements)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Known Issues & Current Limitations](#known-issues--current-limitations)
-- [Future Development Ideas](#future-development-ideas)
-- [Contributing](#contributing)
-- [License](#license)
-- [Author](#author)
-
----
 
 ## Overview
 
@@ -161,25 +141,6 @@ Currently, run parameters are hardcoded at the top of `main.py`:
 option_contracts = "2013-02-26options.csv"
 usTreasury = "par-yield-curve-rates-2010-2019.csv"
 ```
-
-Edit these paths directly to point at different input files.
-
-## Known Issues & Current Limitations
-
-A careful read-through of the current codebase surfaced the following issues worth fixing before relying on this framework for real analysis:
-
-1. **Broken import in `main.py`** — it imports `from Black-scholes import callOption, putOption`, but Python module names cannot contain hyphens, and the actual file is `Black_scholes.py`. This line needs to be corrected to `from Black_scholes import callOption, putOption` or the script will fail to run.
-2. **Undefined variable in `DataCleaning.py`** — `cleanData(options, usTreasury)` references `filtered_options` on its very first line without ever deriving it from the `options` argument (e.g., a missing `filtered_options = options.copy()`). This currently raises a `NameError` when the function is called.
-3. **Column name mismatch** — `main.py` reads `f_options["K"]`, but neither `DataCleaning.py` nor the source CSV appear to create a `"K"` column; `PlotSurface` instead reads `"strike"`. These need to be reconciled (e.g., rename `strike` → `K` inside `cleanData`, or update `main.py`/`PlotSurface` to use a single consistent name).
-4. **Missing dependency manifest** — no `requirements.txt` / `pyproject.toml` is checked in.
-5. **Missing external data file** — the Treasury par-yield CSV `main.py` expects is not part of the repo and must be downloaded separately (see [Data Requirements](#data-requirements)).
-6. **`PlotSurface` has no file extension** — it should be renamed `PlotSurface.py` for conventional, IDE-friendly Python imports.
-7. **Per-row network calls** — `DataCleaning.py` calls `yfinance.download()` inside a Python `for` loop, once per option row. For any realistically sized options chain this will be slow and likely to hit Yahoo Finance rate limits.
-8. **No error handling around `brentq`** — if a quoted market price falls outside the price bounds achievable within `sigma ∈ [0.00001, 5]` (e.g., a stale or bad quote), `solveIV` will raise an unhandled `ValueError` and halt the whole run.
-9. **No caching** — every run re-fetches identical spot prices from Yahoo Finance rather than persisting them locally.
-10. **European-style pricing assumption** — Black-Scholes assumes European exercise; many single-name equity options are American-style, so this can bias the recovered implied vols, particularly for puts.
-11. **No `LICENSE` file** — the repository does not currently specify usage terms.
-
 ## Future Development Ideas
 
 - Add a pinned `requirements.txt` / `pyproject.toml`, and auto-download/cache the Treasury par-yield curve instead of requiring a manual file.
